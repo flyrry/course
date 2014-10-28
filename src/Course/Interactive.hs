@@ -84,7 +84,10 @@ data Op =
 convertInteractive ::
   IO ()
 convertInteractive =
-  error "todo"
+  vooid (putStr "Enter a string: " >-
+         getLine >>= \s ->
+         putStrLn (map toUpper s)
+        )
 
 -- |
 --
@@ -112,7 +115,13 @@ convertInteractive =
 reverseInteractive ::
   IO ()
 reverseInteractive =
-  error "todo"
+  vooid(putStr "Enter file to reverse: " >-
+        getLine >>= \fr ->
+        putStr "Enter destination file: " >-
+        getLine >>= \fw ->
+        readFile fr >>= \s ->
+        writeFile fw (reverse s) >-
+        putStrLn "Done!")
 
 -- |
 --
@@ -138,7 +147,14 @@ reverseInteractive =
 encodeInteractive ::
   IO ()
 encodeInteractive =
-  error "todo"
+  vooid(putStr "Enter a string to url-encode: " >-
+        getLine >>= \s ->
+        putStrLn (foldRight (\c rs -> case c of
+                                      ' ' -> "%20"++rs
+                                      '\t' -> "%09"++rs
+                                      '\"' -> "%22"++rs
+                                      x -> (x:.rs)) Nil s)
+       )
 
 interactive ::
   IO ()

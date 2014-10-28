@@ -14,8 +14,15 @@ fastAnagrams ::
   Chars
   -> Filename
   -> IO (List Chars)
-fastAnagrams =
-  error "todo"
+fastAnagrams word file =
+  let sorted_word = qsort $ map toLower word
+  in (\text -> foldLeft (\ans w -> if (qsort $ map toLower w) == sorted_word then (w:.ans) else ans) Nil (lines text)) <$> (readFile file)
+
+qsort :: Ord a => List a -> List a
+qsort Nil = Nil
+qsort (x:.xs) = (qsortby (<=) xs) ++ (x:.Nil) ++ (qsortby (>) xs)
+              where qsortby fn ys = qsort $ filter (\y -> y `fn` x) ys
+
 
 newtype NoCaseString =
   NoCaseString {

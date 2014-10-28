@@ -60,43 +60,27 @@ the contents of c
 -}
 
 -- /Tip:/ use @getArgs@ and @run@
-main ::
-  IO ()
-main =
-  error "todo"
+main :: IO ()
+main = getArgs >>= (\(x:._) -> run x)
 
-type FilePath =
-  Chars
+type FilePath = Chars
 
 -- /Tip:/ Use @getFiles@ and @printFiles@.
-run ::
-  Chars
-  -> IO ()
-run =
-  error "todo"
+run :: Chars -> IO ()
+--run fp = getFiles (fp :. Nil) >>= printFiles
+run arg = getFiles (arg :. Nil) >>= (\((_,txt):._) -> getFiles (lines txt)) >>= printFiles
 
-getFiles ::
-  List FilePath
-  -> IO (List (FilePath, Chars))
-getFiles =
-  error "todo"
+getFiles :: List FilePath -> IO (List (FilePath, Chars))
+getFiles Nil = pure Nil
+getFiles (x:.xs) = lift2 (:.) (getFile x) (getFiles xs)
 
-getFile ::
-  FilePath
-  -> IO (FilePath, Chars)
-getFile =
-  error "todo"
+getFile :: FilePath -> IO (FilePath, Chars)
+getFile fp = readFile fp >>= (\txt -> pure (fp, txt))
 
-printFiles ::
-  List (FilePath, Chars)
-  -> IO ()
-printFiles =
-  error "todo"
+printFiles :: List (FilePath, Chars) -> IO ()
+printFiles Nil = pure ()
+printFiles ((fp,txt):.xs) = printFile fp txt >> printFiles xs
 
-printFile ::
-  FilePath
-  -> Chars
-  -> IO ()
-printFile =
-  error "todo"
+printFile :: FilePath -> Chars -> IO ()
+printFile fp txt = putStrLn ("============ " ++ fp) >> putStrLn txt
 

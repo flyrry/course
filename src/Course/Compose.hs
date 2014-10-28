@@ -17,23 +17,23 @@ newtype Compose f g a =
 -- Implement a Functor instance for Compose
 instance (Functor f, Functor g) =>
     Functor (Compose f g) where
-  (<$>) =
-    error "todo"
+  --(<$>) :: (a -> b) -> Compose f g a -> Compose f g b
+  (<$>) fn (Compose a) = Compose ((fn <$>) <$> a)
 
 instance (Apply f, Apply g) =>
   Apply (Compose f g) where
 -- Implement the (<*>) function for an Apply instance for Compose
-  (<*>) =
-    error "todo"
+  --(<*>) :: Compose f g (a -> b) -> Compose f g a -> Compose f g b
+  (<*>) cab ca = lift2 (\f a -> f a) cab ca
+  --(<*>) = error "todo"
 
 instance (Applicative f, Applicative g) =>
   Applicative (Compose f g) where
 -- Implement the pure function for an Applicative instance for Compose
-  pure =
-    error "todo"
+  pure = Compose . pure . pure
 
 instance (Bind f, Bind g) =>
   Bind (Compose f g) where
 -- Implement the (=<<) function for a Bind instance for Compose
-  (=<<) =
-    error "todo"
+  --(=<<) :: (a -> Compose f g b) -> Compose f g a -> Compose f g b
+  (=<<) = error "todo"

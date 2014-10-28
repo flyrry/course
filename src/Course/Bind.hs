@@ -63,8 +63,7 @@ infixr 1 =<<
   f (a -> b)
   -> f a
   -> f b
-(<*>) =
-  error "todo"
+(<*>) fm m = fm >>= \f -> f <$> m
 
 infixl 4 <*>
 
@@ -77,8 +76,7 @@ instance Bind Id where
     (a -> Id b)
     -> Id a
     -> Id b
-  (=<<) =
-    error "todo"
+  (=<<) fm (Id m) = fm m
 
 -- | Binds a function on a List.
 --
@@ -89,8 +87,8 @@ instance Bind List where
     (a -> List b)
     -> List a
     -> List b
-  (=<<) =
-    error "todo"
+  (=<<) _ Nil = Nil
+  (=<<) fm (x:.xs) = fm x ++ (fm =<< xs)
 
 -- | Binds a function on an Optional.
 --
@@ -101,8 +99,8 @@ instance Bind Optional where
     (a -> Optional b)
     -> Optional a
     -> Optional b
-  (=<<) =
-    error "todo"
+  (=<<) _ Empty = Empty
+  (=<<) fm (Full x) = fm x
 
 -- | Binds a function on the reader ((->) t).
 --
@@ -113,8 +111,7 @@ instance Bind ((->) t) where
     (a -> ((->) t b))
     -> ((->) t a)
     -> ((->) t b)
-  (=<<) =
-    error "todo"
+  (=<<) fm m x = fm (m x) x
 
 -- | Flattens a combined structure to a single structure.
 --
@@ -133,8 +130,8 @@ join ::
   Bind f =>
   f (f a)
   -> f a
-join =
-  error "todo"
+join mm = m =<< mm
+        where m = (\x -> x)
 
 -- | Implement a flipped version of @(=<<)@, however, use only
 -- @join@ and @(<$>)@.
@@ -147,8 +144,7 @@ join =
   f a
   -> (a -> f b)
   -> f b
-(>>=) =
-  error "todo"
+(>>=) m fm = join (fm <$> m)
 
 infixl 1 >>=
 
@@ -163,8 +159,7 @@ infixl 1 >>=
   -> (a -> f b)
   -> a
   -> f c
-(<=<) =
-  error "todo"
+(<=<) fbc fab a = fbc =<< (fab a)
 
 infixr 1 <=<
 

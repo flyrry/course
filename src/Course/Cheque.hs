@@ -323,5 +323,81 @@ fromChar _ =
 dollars ::
   Chars
   -> Chars
-dollars =
-  error "todo"
+dollars text =
+  let (before, after) = span (\c -> c /= '.') text
+      digitFilter = foldRight (\c acc -> case fromChar c of
+                                          Full d -> (d:.acc)
+                                          Empty -> acc) Nil
+      dllrs = groupDigits $ dropWhile isZero $ digitFilter before
+      cents = let centDigits = take 2 $ digitFilter after -- "round" cents to 2 digits
+              in groupDigits $ if (length centDigits > 1) then centDigits else (centDigits ++ (Zero:.Nil))
+      dollarText = if (singles $ reverse dllrs) then "dollar" else "dollars"
+      centText = if (singles $ reverse cents) then "cent" else "cents"
+      singles Nil = False
+      singles (d:._) = case d of
+                    D1 x -> isOne x
+                    D2 y x -> (not $ isOne y) && isOne x
+                    D3 _ y x -> (not $ isOne y) && isOne x
+                    where isOne x = x == One
+  in spellOut dllrs ++ dollarText ++ " and " ++ spellOut cents ++ centText
+
+spellOut :: List Digit3 -> Chars
+spellOut l = foldRight (\(d3, suffix) acc -> adjust (showExtDigit d3) suffix acc)
+             Nil
+             (reverse $ filter (\(d3, _) -> not $ isRedundant d3) $ zip (reverse l) illion)
+           where adjust num suff rest = if (isEmpty suff) then num ++ (' ':.rest) else num ++ (' ':.suff) ++ (' ':.rest)
+                 isRedundant z = case z of
+                                  --D1 Zero -> True
+                                  --D2 Zero Zero -> True
+                                  D3 Zero Zero Zero -> True
+                                  _ -> False
+
+isZero :: Digit -> Bool
+isZero Zero = True
+isZero _ = False
+
+groupDigits :: List Digit -> List Digit3
+groupDigits Nil = (D1 Zero) :. Nil
+groupDigits ld@(x:.xs) =
+  let len = length ld
+      r = len `mod` 3
+      groupIn3s (a:.b:.c:.rest) = (D3 a b c) :. groupIn3s rest
+      groupIn3s _ = Nil
+  in case r of
+      1 -> (D1 x) :. groupIn3s xs
+      2 -> (\(x1:.x2:._) -> (D2 x1 x2) :. (groupIn3s $ drop 2 ld)) $ take 2 ld
+      _ -> groupIn3s ld
+
+showMDPrefix :: Digit -> Chars
+showMDPrefix Two = "twen"
+showMDPrefix Three = "thir"
+showMDPrefix Four = "for"
+showMDPrefix Five = "fif"
+showMDPrefix Eight = "eigh"
+showMDPrefix x = showDigit x
+
+showExtDigit :: Digit3 -> Chars
+showExtDigit (D1 d) = showDigit d
+showExtDigit (D2 d1 d2) =
+  case d1 of
+  Zero -> case d2 of
+          Zero -> "zero"
+          _ -> showDigit d2
+  One -> case d2 of
+         Zero -> "ten"
+         One -> "eleven"
+         Two -> "twelve"
+         Three -> "thirteen"
+         Four -> "fourteen"
+         Five -> "fifteen"
+         _ -> showDigit d2 ++ "teen"
+  _ ->  case d2 of
+        Zero -> showMDPrefix d1 ++ "ty"
+        _ -> showMDPrefix d1 ++ "ty-" ++ showDigit d2
+showExtDigit (D3 d1 d2 d3) = case d1 of
+                              Zero -> showExtDigit (D2 d2 d3)
+                              _ -> case d2 of
+                                    Zero -> case d3 of
+                                            Zero -> showDigit d1 ++ " hundred"
+                                            _ -> showDigit d1 ++ " hundred and " ++ showDigit d3
+                                    _ -> showDigit d1 ++ " hundred and " ++ showExtDigit (D2 d2 d3)

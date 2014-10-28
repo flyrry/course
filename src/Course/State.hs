@@ -41,8 +41,12 @@ instance Functor (State s) where
     (a -> b)
     -> State s a
     -> State s b
-  (<$>) =
-      error "todo"
+  (<$>) f sa = State (\s ->
+               let (a, s') = runState sa s
+               in (f a, s'))
+  --(<$>) f (State sf) = let (a, s) = sf s
+  --                     in State (\s -> (f a, s))
+  --(<$>) f (State sf) = State (\s -> (f (fst (sf s)), s))
 
 -- | Implement the `Apply` instance for `State s`.
 -- >>> runState (pure (+1) <*> pure 0) 0
@@ -56,8 +60,14 @@ instance Apply (State s) where
     State s (a -> b)
     -> State s a
     -> State s b 
-  (<*>) =
-    error "todo"
+  (<*>) sf sa = State (\s ->
+                let (fab, s') = runState sf s
+                    (a, s'') = runState sa s'
+                in (fab a, s''))
+  --(<*>) sf sa = let (fab, _) = (runState sf) s
+  --                  (a, s) = (runState sa) s
+  --              in State (\s -> (fab a, s))
+  --(<*>) (State sf) (State sa) = State (\s -> ((fst (sf s)) (fst (sa s)),s))
 
 -- | Implement the `Applicative` instance for `State s`.
 -- >>> runState (pure 2) 0
@@ -66,8 +76,7 @@ instance Applicative (State s) where
   pure ::
     a
     -> State s a
-  pure =
-    error "todo"
+  pure a = State (\s -> (a, s))
 
 -- | Implement the `Bind` instance for `State s`.
 -- >>> runState ((const $ put 2) =<< put 1) 0
@@ -77,8 +86,9 @@ instance Bind (State s) where
     (a -> State s b)
     -> State s a
     -> State s b
-  (=<<) =
-    error "todo"
+  (=<<) fas sa = State (\s ->
+               let (a, s') = runState sa s
+               in runState (fas a) s')
 
 instance Monad (State s) where
 
@@ -89,8 +99,8 @@ exec ::
   State s a
   -> s
   -> s
-exec =
-  error "todo"
+exec sa s = snd $ (runState sa) s
+--exec = error "exec"
 
 -- | Run the `State` seeded with `s` and retrieve the resulting value.
 --
@@ -99,8 +109,7 @@ eval ::
   State s a
   -> s
   -> a
-eval =
-  error "todo"
+eval sa s = fst $ (runState sa) s
 
 -- | A `State` where the state also distributes into the produced value.
 --
@@ -108,8 +117,7 @@ eval =
 -- (0,0)
 get ::
   State s s
-get =
-  error "todo"
+get = State (\s -> (s,s))
 
 -- | A `State` where the resulting state is seeded with the given value.
 --
@@ -118,8 +126,7 @@ get =
 put ::
   s
   -> State s ()
-put =
-  error "todo"
+put s = State (\_ -> ((),s))
 
 -- | Find the first element in a `List` that satisfies a given predicate.
 -- It is possible that no element is found, hence an `Optional` result.
@@ -135,13 +142,12 @@ put =
 --
 -- >>> let p x = (\s -> (const $ pure (x == 'i')) =<< put (1+s)) =<< get in runState (findM p $ listh ['a'..'h']) 0
 -- (Empty,8)
-findM ::
-  Monad f =>
+findM :: Monad f =>
   (a -> f Bool)
   -> List a
   -> f (Optional a)
-findM =
-  error "todo"
+findM _ Nil = return Empty
+findM mp (x:.xs) = (mp x) >>= \b -> if b then return (Full x) else findM mp xs
 
 -- | Find the first element in a `List` that repeats.
 -- It is possible that no element repeats, hence an `Optional` result.
@@ -154,8 +160,8 @@ firstRepeat ::
   Ord a =>
   List a
   -> Optional a
-firstRepeat =
-  error "todo"
+firstRepeat l = eval (findM predicate l) S.empty
+              where predicate = \e -> State (\set -> (S.member e set,S.insert e set))
 
 -- | Remove all duplicate elements in a `List`.
 -- /Tip:/ Use `filtering` and `State` with a @Data.Set#Set@.
@@ -167,8 +173,8 @@ distinct ::
   Ord a =>
   List a
   -> List a
-distinct =
-  error "todo"
+distinct l = eval (filtering predicate l) S.empty
+           where predicate = (\e -> State (\set -> (not $ S.member e set, S.insert e set)))
 
 -- | A happy number is a positive integer, where the sum of the square of its digits eventually reaches 1 after repetition.
 -- In contrast, a sad number (not a happy number) is where the sum of the square of its digits never reaches 1
@@ -191,8 +197,30 @@ distinct =
 --
 -- >>> isHappy 44
 -- True
+isHappy :: Integer -> Bool
+isHappy num = contains 1 (eval (findM p (infiniteSquares num)) S.empty)
+            where p = (\e -> if (e==1) then State(\set -> (True, set)) else State(\set -> (S.member e set, S.insert e set)))
+            -- or --where p e = (\set -> if (e==1) then State(\_ -> (True, set)) else State(\_ -> (S.member e set, S.insert e set))) =<< get
+
+infiniteSquares :: Integer -> List Integer
+infiniteSquares num = produce (\n -> foldLeft (\acc c -> acc + (toInteger $ (digitToInt c)*(digitToInt c))) 0 (listh $ show n)) num
+{-
 isHappy ::
   Integer
   -> Bool
-isHappy =
-  error "todo"
+isHappy n = isH n S.empty
+
+isH :: Integer -> (S.Set Integer) -> Bool
+isH n s = if (n==1) then True
+            else if b then False else isH (sumSq' n) s'
+              where (b,s') = f n s
+                    f = (\d set -> (S.member d set, S.insert d set))
+
+
+--isHappy = error "isHappy"
+
+sumSq' :: Integer -> Integer
+sumSq' n = P.foldl (\acc d -> acc + (d*d)) 0 (sumSq n)
+sumSq :: Integer -> [Integer]
+sumSq num = P.map (toInteger . digitToInt) (show num)
+-}

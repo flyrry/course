@@ -32,13 +32,12 @@ anagrams ::
   Chars
   -> Filename
   -> IO (List Chars)
-anagrams =
-  error "todo"
+anagrams word file =
+  (\text -> intersectBy (\a b -> equalIgnoringCase a b) (lines text) (permutations word)) <$> (readFile file)
 
 -- Compare two strings for equality, ignoring case
 equalIgnoringCase ::
   Chars
   -> Chars
   -> Bool
-equalIgnoringCase =
-  error "todo"
+equalIgnoringCase s1 s2 = on (\a b -> a == b) (\s -> map toLower s) s1 s2
